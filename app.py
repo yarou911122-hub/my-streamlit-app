@@ -1,126 +1,64 @@
+import streamlit as st
+import psycopg
 
-<!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>按鈕與對話框</title>
 
-  <style>
-    body {
-      font-family: "Microsoft JhengHei", sans-serif;
-      background: #f5f7fb;
-      display: grid;
-      place-items: center;
-      min-height: 100vh;
-      margin: 0;
-    }
+st.title("🎓 我的第一個 Streamlit 網頁")
 
-    .panel {
-      background: white;
-      padding: 40px;
-      border-radius: 16px;
-      text-align: center;
-      box-shadow: 0 8px 30px #15284b1a;
-    }
+st.write("歡迎來到 Streamlit！")
 
-    button {
-      border: 0;
-      border-radius: 8px;
-      padding: 12px 20px;
-      cursor: pointer;
-      font-size: 16px;
-    }
+name = st.text_input("請輸入姓名")
 
-    button:hover {
-      opacity: 0.8;
-    }
+department = st.selectbox(
+    "請選擇科系",
+    ["資訊管理系", "資訊工程系", "其他"]
+)
 
-    .danger {
-      background: #c62828;
-      color: white;
-    }
+score = st.slider(
+    "今天的課程滿意度",
+    1, 5, 3
+)
 
-    .secondary {
-      background: #e9eef5;
-      color: #24334b;
-    }
+if st.button("送出"):
+    if name == "":
+        st.warning("請先輸入姓名")
+    else:
+        st.success("資料送出成功！")
+        st.write("姓名：", name)
+        st.write("科系：", department)
+        st.write("滿意度：", score)
 
-    dialog {
-      border: 0;
-      border-radius: 14px;
-      padding: 28px;
-      max-width: 360px;
-      box-shadow: 0 20px 50px #0003;
-    }
 
-    dialog::backdrop {
-      background: #0006;
-    }
+# =========================
+# Neon PostgreSQL 公告
+# =========================
 
-    .actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      margin-top: 25px;
-    }
+st.divider()
+st.header("📢 最新公告")
 
-    #status {
-      color: #227343;
-    }
-  </style>
-</head>
+try:
+    conn = psycopg.connect(st.secrets["DATABASE_URL"])
 
-<body>
-  <main class="panel">
-    <h1>按鈕與對話框</h1>
-    <p>點擊按鈕，體驗確認流程。</p>
+    cursor = conn.cursor()
 
-    <button class="danger" id="deleteBtn">
-      刪除資料
-    </button>
+    cursor.execute("""
+        SELECT title, content, created_at
+        FROM announcements_announcement
+        ORDER BY created_at DESC
+    """)
 
-    <p id="status" role="status"></p>
-  </main>
+    announcements = cursor.fetchall()
 
-  <dialog id="confirmDialog">
-    <h2>確認刪除</h2>
-    <p>確定要刪除資料嗎？</p>
+    if announcements:
+        for title, content, created_at in announcements:
+            st.subheader(title)
+            st.write(content)
+            st.caption(f"發布時間：{created_at}")
+    else:
+        st.info("目前沒有公告")
 
-    <div class="actions">
-      <button class="secondary" id="cancelBtn">
-        取消
-      </button>
+    cursor.close()
+    conn.close()
 
-      <button class="danger" id="confirmBtn">
-        確認刪除
-      </button>
-    </div>
-  </dialog>
-
-  <script>
-    const dialog = document.querySelector("#confirmDialog");
-
-    // 點擊刪除按鈕，開啟對話框
-    document.querySelector("#deleteBtn")
-      .addEventListener("click", () => {
-        dialog.showModal();
-      });
-
-    // 點擊取消，關閉對話框
-    document.querySelector("#cancelBtn")
-      .addEventListener("click", () => {
-        dialog.close();
-      });
-
-    // 點擊確認，顯示結果
-    document.querySelector("#confirmBtn")
-      .addEventListener("click", () => {
-        dialog.close();
-
-        document.querySelector("#status").textContent =
-          "已確認刪除（示範，不會真的刪除資料）";
-      });
-  </script>
-</body>
-</html>
+except Exception as e:
+    st.error("目前無法讀取公告資料")
+    st.exception(e)
